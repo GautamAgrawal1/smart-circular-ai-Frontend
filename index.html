@@ -98,7 +98,8 @@
 
 <script type="text/babel">
 
-const API="https://smart-circular-ai-backend-1.onrender.com";
+/* ✅ DEPLOYED BACKEND URL (NO SPACE, NO LOCALHOST) */
+const API = "https://smart-circular-ai-backend-1.onrender.com";
 
 function App(){
 
@@ -236,11 +237,12 @@ function Login({setToken,setPage}){
     });
 
     const data=await res.json();
+
     if(!res.ok){
       alert(
-      typeof data.detail === "string"
-        ? data.detail
-        : data.detail?.message || "Invalid image"
+        typeof data.detail === "string"
+          ? data.detail
+          : data.detail?.message || "Login failed"
       );
       return;
     }
@@ -280,7 +282,11 @@ function Register({setPage}){
     );
 
     const data=await res.json();
-    if(!res.ok){alert(data.detail||"Failed");return;}
+
+    if(!res.ok){
+      alert(data.detail||"Failed");
+      return;
+    }
 
     alert("Registered successfully");
     setPage("login");
@@ -313,27 +319,48 @@ function Analyzer({token}){
 
   const change=e=>setForm({...form,[e.target.name]:e.target.value});
 
-  const submit=async()=>{
-    if(!image){alert("Upload image");return;}
+  const submit = async () => {
 
-    const fd=new FormData();
-    fd.append("image",image);
-    Object.keys(form).forEach(k=>fd.append(k,form[k]));
+    if (!image) {
+      alert("Upload image");
+      return;
+    }
+
+    const fd = new FormData();
+    fd.append("image", image);
+    Object.keys(form).forEach(k => fd.append(k, form[k]));
 
     setLoading(true);
 
-    const res=await fetch(API+"/analyze-product",{
-      method:"POST",
-      headers:{Authorization:"Bearer "+token},
-      body:fd
-    });
+    try {
 
-    const data=await res.json();
-    setLoading(false);
+      const res = await fetch(API + "/analyze-product", {
+        method: "POST",
+        headers: {
+          Authorization: "Bearer " + token
+        },
+        body: fd
+      });
 
-    if(!res.ok){alert(data.detail||"Error");return;}
+      const data = await res.json();
 
-    setResult(data);
+      if (!res.ok) {
+        alert(data.detail || "Server error");
+        return;
+      }
+
+      setResult(data);
+
+    } catch (err) {
+
+      console.error(err);
+      alert("Backend not reachable / network error");
+
+    } finally {
+
+      setLoading(false);
+
+    }
   };
 
   React.useEffect(()=>{
@@ -418,7 +445,8 @@ function History({token}){
 
   React.useEffect(()=>{
     fetch(API+"/me/history",{headers:{Authorization:"Bearer "+token}})
-    .then(r=>r.json()).then(setRows);
+      .then(r=>r.json())
+      .then(setRows);
   },[]);
 
   return(
