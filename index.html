@@ -319,49 +319,85 @@ function Analyzer({token}){
 
   const change=e=>setForm({...form,[e.target.name]:e.target.value});
 
-  const submit = async () => {
+  const resizeImage = (file) =>
+  new Promise((resolve) => {
+    const img = new Image();
+    const canvas = document.createElement("canvas");
+    const ctx = canvas.getContext("2d");
 
-    if (!image) {
-      alert("Upload image");
-      return;
-    }
+    img.onload = () => {
+      const maxSize = 512;
+      let w = img.width;
+      let h = img.height;
+
+      if (w > h) {
+        if (w > maxSize) {
+          h *= maxSize / w;
+          w = maxSize;
+        }
+      } else {
+        if (h > maxSize) {
+          w *= maxSize / h;
+          h = maxSize;
+        }
+      }
+
+      canvas.width = w;
+      canvas.height = h;
+      ctx.drawImage(img, 0, 0, w, h);
+
+      canvas.toBlob(
+        (blob) => resolve(new File([blob], file.name, { type: "image/jpeg" })),
+        "image/jpeg",
+        0.7
+      );
+    };
+
+    img.src = URL.createObjectURL(file);
+  });
+  const submit = async () => {
+  if (!image) {
+    alert("Upload image");
+    return;
+  }
+
+  setLoading(true);
+
+  try {
+    const resized = await resizeImage(image);
 
     const fd = new FormData();
-    fd.append("image", image);
+    fd.append("image", resized);
     Object.keys(form).forEach(k => fd.append(k, form[k]));
 
-    setLoading(true);
-
-    try {
-
-      const res = await fetch(API + "/analyze-product", {
+    const res = await fetch(
+      "https://smart-circular-ai-backend-1.onrender.com/analyze-product",
+      {
         method: "POST",
         headers: {
           Authorization: "Bearer " + token
         },
         body: fd
-      });
-
-      const data = await res.json();
-
-      if (!res.ok) {
-        alert(data.detail || "Server error");
-        return;
       }
+    );
 
-      setResult(data);
+    const data = await res.json();
 
-    } catch (err) {
-
-      console.error(err);
-      alert("Backend not reachable / network error");
-
-    } finally {
-
-      setLoading(false);
-
+    if (!res.ok) {
+      alert(data.detail || "Server error");
+      return;
     }
-  };
+
+    setResult(data);
+
+  } catch (err) {
+    console.error(err);
+    alert("Backend crashed / memory limit hit");
+  } finally {
+    setLoading(false);
+  }
+};
+
 
   React.useEffect(()=>{
     if(!result||!window.L)return;
