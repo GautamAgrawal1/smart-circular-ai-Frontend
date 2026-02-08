@@ -384,9 +384,18 @@ function Analyzer({token}){
     const data = await res.json();
 
     if (!res.ok) {
-      alert(data.detail || "Server error");
-      return;
+
+    if (typeof data.detail === "string") {
+      alert(data.detail);
+    } else if (data.detail && data.detail.message) {
+      alert(data.detail.message);
+    } else {
+      alert("Invalid image or server error");
     }
+
+    return;
+    }
+
 
     setResult(data);
 
